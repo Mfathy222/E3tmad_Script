@@ -9,11 +9,8 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 import re  # لإضافة التحقق من الروابط
 import math  # لاستخدام الدالة ceil
 import datetime  # لاستيراد datetime لطباعة الوقت
-
-# إعداد خيارات المتصفح (اختياري)
-chrome_options = Options()
-# يمكنك إضافة أي خيارات تحتاجها هنا
-chrome_options.add_argument('--headless')  # يمكنك تعطيل هذا الخيار إذا أردت مشاهدة المتصفح
+from selenium.webdriver.chrome.service import Service
+from webdriver_manager.chrome import ChromeDriverManager
 
 # طباعة الوقت عند بدء السكربت
 start_time = datetime.datetime.now()
@@ -40,7 +37,7 @@ except Exception as e:
 max_workers = 15  # يمكنك تقليله إذا واجهت مشاكل في الأداء
 
 # تحديد حجم الدفعة (عدد الروابط في كل دفعة)
-batch_size = 2000  # حفظ كل 2000 سجلات في ملف واحد
+batch_size = 1000  # حفظ كل 2000 سجلات في ملف واحد
 
 # حساب عدد الدفعات
 num_batches = math.ceil(len(urls) / batch_size)
@@ -54,6 +51,25 @@ error_links_lock = threading.Lock()
 
 # متغير لحفظ الوقت المستغرق في الدفعة الأولى
 first_batch_duration = None
+
+# إضافة دالة set_up_driver()
+def set_up_driver():
+    # إعداد خيارات المتصفح
+    chrome_options = Options()
+    # تشغيل المتصفح في وضع غير مرئي
+    chrome_options.add_argument("--headless")  # قم بإلغاء التعليق إذا كنت تريد تشغيل المتصفح في الخلفية
+    # تعطيل تسريع GPU
+    chrome_options.add_argument("--disable-gpu")
+    # تجاوز نموذج الأمان
+    chrome_options.add_argument("--no-sandbox")
+    # ضبط حجم النافذة
+    chrome_options.add_argument("--window-size=1920,1080")
+    chrome_options.add_experimental_option("detach", True)
+    # إعداد خدمة المتصفح باستخدام ChromeDriverManager
+    service = Service(ChromeDriverManager().install())
+    # إنشاء متصفح Chrome باستخدام الخدمة والإعدادات
+    browser = webdriver.Chrome(service=service, options=chrome_options)
+    return browser
 
 # بدء معالجة الدفعات
 for batch_num in range(num_batches):
@@ -114,7 +130,7 @@ for batch_num in range(num_batches):
     # دالة لاستخراج البيانات من رابط واحد
     def extract_data(url):
         try:
-            driver = webdriver.Chrome(options=chrome_options)
+            driver = set_up_driver()
             driver.get(url)
             time.sleep(1)  # الانتظار حتى يتم تحميل الصفحة بالكامل
 
