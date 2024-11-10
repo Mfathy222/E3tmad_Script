@@ -37,7 +37,7 @@ except Exception as e:
 max_workers = 15  # يمكنك تقليله إذا واجهت مشاكل في الأداء
 
 # تحديد حجم الدفعة (عدد الروابط في كل دفعة)
-batch_size = 1000  # حفظ كل 2000 سجلات في ملف واحد
+batch_size = 100  # حفظ كل 2000 سجلات في ملف واحد
 
 # حساب عدد الدفعات
 num_batches = math.ceil(len(urls) / batch_size)
