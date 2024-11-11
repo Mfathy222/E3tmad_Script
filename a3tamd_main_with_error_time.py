@@ -3,6 +3,7 @@ import threading
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
+from webdriver_manager.chrome import ChromeDriverManager  # تم إضافة هذا السطر
 import time
 import openpyxl
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -40,7 +41,7 @@ except Exception as e:
 max_workers = 10  # يمكنك تقليله إذا واجهت مشاكل في الأداء
 
 # تحديد حجم الدفعة (عدد الروابط في كل دفعة)
-batch_size = 1000 # حفظ كل 100 سجل في ملف واحد
+batch_size = 1000  # حفظ كل 1000 سجل في ملف واحد
 
 # حساب عدد الدفعات
 num_batches = math.ceil(len(urls) / batch_size)
@@ -118,7 +119,8 @@ for batch_num in range(num_batches):
     def extract_data(url):
         driver = None  # تعريف المتغير بقيمة None
         try:
-            driver = webdriver.Chrome(options=chrome_options)
+            # تعديل هنا لاستخدام ChromeDriverManager
+            driver = webdriver.Chrome(ChromeDriverManager().install(), options=chrome_options)
             driver.get(url)
             time.sleep(1)  # الانتظار حتى يتم تحميل الصفحة بالكامل
 
@@ -348,7 +350,7 @@ for batch_num in range(num_batches):
     hours = int((batch_duration % 86400) // 3600)
     minutes = int((batch_duration % 3600) // 60)
     seconds = int(batch_duration % 60)
-    print(f"The batch {batch_num + 1} was processed in {days} day, {hours} hours, {minutes} minutes, and {seconds} seconds.")
+    print(f"The batch {batch_num + 1} was processed in {days} day(s), {hours} hour(s), {minutes} minute(s), and {seconds} second(s).")
 
     # إذا كانت هذه هي الدفعة الأولى، احفظ مدتها
     if batch_num == 0:
