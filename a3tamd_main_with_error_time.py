@@ -37,10 +37,10 @@ except Exception as e:
     exit()
 
 # تحديد عدد الخيوط (يمكنك تعديل هذا الرقم بناءً على موارد جهازك)
-max_workers = 15  # يمكنك تقليله إذا واجهت مشاكل في الأداء
+max_workers = 20  # يمكنك تقليله إذا واجهت مشاكل في الأداء
 
 # تحديد حجم الدفعة (عدد الروابط في كل دفعة)
-batch_size = 10  # حفظ كل 2000 سجلات في ملف واحد
+batch_size = 100  # حفظ كل 100 سجل في ملف واحد
 
 # حساب عدد الدفعات
 num_batches = math.ceil(len(urls) / batch_size)
@@ -76,8 +76,9 @@ for batch_num in range(num_batches):
     sheet = workbook.active
     sheet.title = "Projects"
 
-    # كتابة عناوين الأعمدة
+    # كتابة عناوين الأعمدة (تمت إضافة "الرابط" كعمود جديد)
     sheet.append([
+        "الرابط",  # العمود الجديد
         "اسم المنافسة",
         "رقم المنافسة",
         "الرقم المرجعي",
@@ -87,21 +88,23 @@ for batch_num in range(num_batches):
         "هل التأمين من متطلبات المنافسة",
         "نوع المنافسة",
         "الجهة الحكومية",
-        "نوع الاتفاقية",
-        "مدة الاتفاقية",
         "طريقة تقديم العروض",
         "مطلوب ضمان الابتدائي",
-        "الضمان النهائي",
         "تاريخ فحص العروض",
         "التاريخ المتوقع للترسية",
         "تاريخ بدء الأعمال / الخدمات",
         "مكان فتح العرض",
         "مكان التنفيذ",
+        "الضمان النهائي",
+        "نوع الاتفاقية",
+        "مدة الاتفاقية",
         "التفاصيل",
         "تشمل المنافسة على بنود توريد",
         "اسم الموردين",
-        "المورد المرسى عليه",
         "قيمة العرض المالي",
+        "نتائج فحص العروض الفنية",
+        "المورد المرسى عليه",
+        "قيمة العرض للمورد المرسى عليه",
         "قيمة الترسية"
     ])
 
@@ -113,6 +116,7 @@ for batch_num in range(num_batches):
 
     # دالة لاستخراج البيانات من رابط واحد
     def extract_data(url):
+        driver = None  # تعريف المتغير بقيمة None
         try:
             driver = webdriver.Chrome(options=chrome_options)
             driver.get(url)
@@ -129,16 +133,38 @@ for batch_num in range(num_batches):
             اسم_المنافسة = get_text('//*[@id="basicDetials"]/div[2]/ul/li[1]/div/div[2]/span')
             رقم_المنافسة = get_text('//*[@id="basicDetials"]/div[2]/ul/li[2]/div/div[2]/span')
             الرقم_المرجعي = get_text('//*[@id="basicDetials"]/div[2]/ul/li[3]/div/div[2]/span')
-            الغرض_من_المنافسة = get_text('//*[@id="subPurposSapn"]')
+
+            try:
+                عنصر_النقر = driver.find_element(By.XPATH, '//*[@id="subPurposSapn"]/i')
+                driver.execute_script("arguments[0].click();", عنصر_النقر)
+                time.sleep(2)
+            except:
+                pass
+
+            # تعديل استخراج الغرض من المنافسة لاستبعاد النص داخل <i>
+            try:
+                الغرض_من_المنافسة = driver.execute_script("""
+                    var elem = document.getElementById('purposeSpan');
+                    var text = '';
+                    for (var i = 0; i < elem.childNodes.length; i++) {
+                        if (elem.childNodes[i].nodeType === Node.TEXT_NODE) {
+                            text += elem.childNodes[i].textContent;
+                        }
+                    }
+                    return text.trim();
+                """)
+            except:
+                الغرض_من_المنافسة = 'لايوجد'
+
             قيمة_وثائق_المنافسة = get_text('//*[@id="basicDetials"]/div[2]/ul/li[5]/div/div[2]/span')
             حالة_المنافسة = get_text('//*[@id="basicDetials"]/div[2]/ul/li[6]/div/div[2]/span')
             هل_التأمين_من_المتطلبات = get_text('//*[@id="basicDetials"]/div[2]/ul/li[8]/div/div[2]/span')
             نوع_المنافسة = get_text('//*[@id="basicDetials"]/div[3]/ul/li[1]/div/div[2]/span')
             الجهة_الحكومية = get_text('//*[@id="basicDetials"]/div[3]/ul/li[2]/div/div[2]/span')
-            نوع_الاتفاقية = get_text('//*[@id="basicDetials"]/div[3]/ul/li[5]/div/div[2]/span')
-            مدة_الاتفاقية = get_text('//*[@id="basicDetials"]/div[3]/ul/li[6]/div/div[2]/span')
             طريقة_تقديم_العروض = get_text('//*[@id="basicDetials"]/div[3]/ul/li[4]/div/div[2]/span')
             مطلوب_ضمان_الابتدائي = get_text('//*[@id="basicDetials"]/div[3]/ul/li[5]/div/div[2]/span')
+            نوع_الاتفاقية = get_text('//*[@id="basicDetials"]/div[3]/ul/li[5]/div/div[2]/span')
+            مدة_الاتفاقية = get_text('//*[@id="basicDetials"]/div[3]/ul/li[6]/div/div[2]/span')
             الضمان_النهائي = get_text('//*[@id="basicDetials"]/div[3]/ul/li[7]/div/div[2]/span')
 
             # العناوين والمواعيد المتعلقة بالمنافسة
@@ -149,10 +175,10 @@ for batch_num in range(num_batches):
             except:
                 pass
 
-            مكان_فتح_العرض = get_text('//*[@id="offerDetials"]/div[3]/ul/li/div/div[2]/span')
             تاريخ_فحص_العروض = get_text('//*[@id="offerDetials"]/div[2]/ul[1]/li[4]/div/div[2]/span[1]')
             التاريخ_المتوقع_للترسية = get_text('//*[@id="offerDetials"]/div[2]/ul[2]/li[1]/div/div[2]/span[1]')
             تاريخ_بدء_الاعمال_الخدمات = get_text('//*[@id="offerDetials"]/div[2]/ul[2]/li[2]/div/div[2]/span[1]')
+            مكان_فتح_العرض = get_text('//*[@id="offerDetials"]/div[3]/ul/li/div/div[2]/span')
 
             # مجال التصنيف وموقع التنفيذ والتقديم
             try:
@@ -170,18 +196,13 @@ for batch_num in range(num_batches):
             try:
                 عنصر_النقر = driver.find_element(By.XPATH, '//*[@id="awardingStepTab"]')
                 driver.execute_script("arguments[0].click();", عنصر_النقر)
-                time.sleep(1)
+                time.sleep(2)
             except:
                 pass
 
-            # استخراج قائمة الموردين المرسى عليهم وقيمة العرض المالي وقيمة الترسية
-            المورد_المرسى_عليه = get_text('//*[@id="awardingDiv"]/div[2]/div/table/tbody/tr/td[1]')
-            قيمة_العرض_المالي = get_text('//*[@id="awardingDiv"]/div[2]/div/table/tbody/tr/td[2]/h5')
-            قيمة_الترسية = get_text('//*[@id="awardingDiv"]/div[2]/div/table/tbody/tr/td[3]/h5')
-
             # استخراج أسماء الموردين
             اسماء_الموردين = []
-            for i in range(1, 46):
+            for i in range(1, 60):
                 المورد_xpath = f'//*[@id="offerDetials"]/div/table/tbody/tr[{i}]/td[1]'
                 اسم_المورد = get_text(المورد_xpath)
                 if اسم_المورد != 'لايوجد':
@@ -189,13 +210,43 @@ for batch_num in range(num_batches):
                 else:
                     break
 
+            # استخراج قائمة قيمة العرض المالي
+            قيمة_العرض_المالي_list = []
+            for i in range(1, 60):
+                قيمة_العرض_المالي_xpath = f'//*[@id="offerDetials"]/div/table/tbody/tr[{i}]/td[2]/h5'
+                قيمة_العرض_المالي_value = get_text(قيمة_العرض_المالي_xpath)
+                if قيمة_العرض_المالي_value != 'لايوجد':
+                    قيمة_العرض_المالي_list.append(قيمة_العرض_المالي_value)
+                else:
+                    break
+
+            # استخراج قائمة نتائج فحص العروض الفنية
+            نتائج_فحص_العروض_الفنية_list = []
+            for i in range(1, 60):
+                نتائج_فحص_العروض_الفنية_xpath = f'//*[@id="offerDetials"]/div/table/tbody/tr[{i}]/td[3]/h5'
+                نتائج_فحص_العروض_الفنية_value = get_text(نتائج_فحص_العروض_الفنية_xpath)
+                if نتائج_فحص_العروض_الفنية_value != 'لايوجد':
+                    نتائج_فحص_العروض_الفنية_list.append(نتائج_فحص_العروض_الفنية_value)
+                else:
+                    break
+
+            # استخراج المورد المرسى عليه وقيم العروض
+            المورد_المرسى_عليه = get_text('//*[@id="awardingDiv"]/div[2]/div/table/tbody/tr/td[1]')
+            قيمة_العرض_المالي_للمورد = get_text('//*[@id="awardingDiv"]/div[2]/div/table/tbody/tr/td[2]/h5')
+            قيمة_الترسية = get_text('//*[@id="awardingDiv"]/div[2]/div/table/tbody/tr/td[3]/h5')
+
             driver.quit()
 
             # جمع البيانات في قائمة
             rows_to_write = []
             if اسماء_الموردين:
-                for اسم_الموردين in اسماء_الموردين:
+                for idx, اسم_المورد in enumerate(اسماء_الموردين):
+                    # الحصول على القيم المقابلة من القوائم الأخرى
+                    قيمة_العرض_المالي = قيمة_العرض_المالي_list[idx] if idx < len(قيمة_العرض_المالي_list) else 'لايوجد'
+                    نتائج_فحص_العروض_الفنية = نتائج_فحص_العروض_الفنية_list[idx] if idx < len(نتائج_فحص_العروض_الفنية_list) else 'لايوجد'
+
                     row = [
+                        url,  # إضافة الرابط إلى البيانات
                         اسم_المنافسة,
                         رقم_المنافسة,
                         الرقم_المرجعي,
@@ -205,26 +256,29 @@ for batch_num in range(num_batches):
                         هل_التأمين_من_المتطلبات,
                         نوع_المنافسة,
                         الجهة_الحكومية,
-                        نوع_الاتفاقية,
-                        مدة_الاتفاقية,
                         طريقة_تقديم_العروض,
                         مطلوب_ضمان_الابتدائي,
-                        الضمان_النهائي,
                         تاريخ_فحص_العروض,
                         التاريخ_المتوقع_للترسية,
                         تاريخ_بدء_الاعمال_الخدمات,
                         مكان_فتح_العرض,
                         مكان_التنفيذ,
+                        الضمان_النهائي,
+                        نوع_الاتفاقية,
+                        مدة_الاتفاقية,
                         التفاصيل,
                         تشمل_المنافسة_علي_بنود_توريد,
-                        اسم_الموردين,
-                        المورد_المرسى_عليه,
+                        اسم_المورد,
                         قيمة_العرض_المالي,
+                        نتائج_فحص_العروض_الفنية,
+                        المورد_المرسى_عليه,
+                        قيمة_العرض_المالي_للمورد,
                         قيمة_الترسية
                     ]
                     rows_to_write.append(row)
             else:
                 row = [
+                    url,  # إضافة الرابط إلى البيانات
                     اسم_المنافسة,
                     رقم_المنافسة,
                     الرقم_المرجعي,
@@ -234,21 +288,23 @@ for batch_num in range(num_batches):
                     هل_التأمين_من_المتطلبات,
                     نوع_المنافسة,
                     الجهة_الحكومية,
-                    نوع_الاتفاقية,
-                    مدة_الاتفاقية,
                     طريقة_تقديم_العروض,
                     مطلوب_ضمان_الابتدائي,
-                    الضمان_النهائي,
                     تاريخ_فحص_العروض,
                     التاريخ_المتوقع_للترسية,
                     تاريخ_بدء_الاعمال_الخدمات,
                     مكان_فتح_العرض,
                     مكان_التنفيذ,
+                    الضمان_النهائي,
+                    نوع_الاتفاقية,
+                    مدة_الاتفاقية,
                     التفاصيل,
                     تشمل_المنافسة_علي_بنود_توريد,
                     'لايوجد',  # اسم الموردين
+                    'لايوجد',  # قيمة العرض المالي
+                    'لايوجد',  # نتائج فحص العروض الفنية
                     المورد_المرسى_عليه,
-                    قيمة_العرض_المالي,
+                    قيمة_العرض_المالي_للمورد,
                     قيمة_الترسية
                 ]
                 rows_to_write.append(row)
@@ -263,7 +319,8 @@ for batch_num in range(num_batches):
         except Exception as e:
             print(f"An error occurred while processing the link: {url}")
             print(f"Error: {e}")
-            driver.quit()
+            if driver is not None:
+                driver.quit()
             # إضافة الرابط إلى قائمة الروابط التي حدثت بها أخطاء
             with error_links_lock:
                 error_links.append(url)
@@ -285,7 +342,13 @@ for batch_num in range(num_batches):
     # حساب مدة معالجة الدفعة
     batch_processing_end = time.time()
     batch_duration = batch_processing_end - batch_processing_start
-    print(f"Batch {batch_num + 1} processed in {batch_duration:.2f} seconds.")
+
+    # حساب الأيام والساعات والدقائق والثواني
+    days = int(batch_duration // 86400)
+    hours = int((batch_duration % 86400) // 3600)
+    minutes = int((batch_duration % 3600) // 60)
+    seconds = int(batch_duration % 60)
+    print(f"The batch {batch_num + 1} was processed in {days} day, {hours} hours, {minutes} minutes, and {seconds} seconds.")
 
     # إذا كانت هذه هي الدفعة الأولى، احفظ مدتها
     if batch_num == 0:
