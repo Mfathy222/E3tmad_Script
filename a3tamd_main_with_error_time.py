@@ -12,10 +12,18 @@ import re  # لإضافة التحقق من الروابط
 import math  # لاستخدام الدالة ceil
 import datetime  # لاستيراد datetime لطباعة الوقت
 
-# إعداد خيارات المتصفح (اختياري)
+
+# إعداد خيارات المتصفح
 chrome_options = Options()
-# يمكنك إضافة أي خيارات تحتاجها هنا
-chrome_options.add_argument('--headless')  # يمكنك تعطيل هذا الخيار إذا أردت مشاهدة المتصفح
+chrome_options.add_argument('--headless')  # تشغيل Chrome في وضع الرأسية
+chrome_options.add_argument('--no-sandbox')  # تجاوز نموذج الأمان في نظام التشغيل
+chrome_options.add_argument('--disable-dev-shm-usage')  # استخدام /tmp بدلاً من /dev/shm
+
+# إعداد خدمة ChromeDriver
+service = Service(ChromeDriverManager().install())
+
+# تهيئة المتصفح
+driver = webdriver.Chrome(service=service, options=chrome_options)
 
 # طباعة الوقت عند بدء السكربت
 start_time = datetime.datetime.now()
@@ -42,7 +50,7 @@ except Exception as e:
 max_workers = 10  # يمكنك تقليله إذا واجهت مشاكل في الأداء
 
 # تحديد حجم الدفعة (عدد الروابط في كل دفعة)
-batch_size = 1000  # حفظ كل 1000 سجل في ملف واحد
+batch_size = 10  # حفظ كل 1000 سجل في ملف واحد
 
 # حساب عدد الدفعات
 num_batches = math.ceil(len(urls) / batch_size)
