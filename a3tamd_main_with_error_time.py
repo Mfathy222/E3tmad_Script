@@ -3,7 +3,8 @@ import threading
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
-from webdriver_manager.chrome import ChromeDriverManager  # تم إضافة هذا السطر
+from selenium.webdriver.chrome.service import Service  # تم إضافة هذا السطر
+from webdriver_manager.chrome import ChromeDriverManager
 import time
 import openpyxl
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -38,10 +39,10 @@ except Exception as e:
     exit()
 
 # تحديد عدد الخيوط (يمكنك تعديل هذا الرقم بناءً على موارد جهازك)
-max_workers = 10  # يمكنك تقليله إذا واجهت مشاكل في الأداء
+max_workers = 20  # يمكنك تقليله إذا واجهت مشاكل في الأداء
 
 # تحديد حجم الدفعة (عدد الروابط في كل دفعة)
-batch_size = 1000  # حفظ كل 1000 سجل في ملف واحد
+batch_size = 10  # حفظ كل 1000 سجل في ملف واحد
 
 # حساب عدد الدفعات
 num_batches = math.ceil(len(urls) / batch_size)
@@ -119,8 +120,9 @@ for batch_num in range(num_batches):
     def extract_data(url):
         driver = None  # تعريف المتغير بقيمة None
         try:
-            # تعديل هنا لاستخدام ChromeDriverManager
-            driver = webdriver.Chrome(ChromeDriverManager().install(), options=chrome_options)
+            # استخدام كائن Service مع ChromeDriverManager
+            service = Service(ChromeDriverManager().install())
+            driver = webdriver.Chrome(service=service, options=chrome_options)
             driver.get(url)
             time.sleep(1)  # الانتظار حتى يتم تحميل الصفحة بالكامل
 
